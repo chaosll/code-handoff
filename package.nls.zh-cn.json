@@ -1,0 +1,6 @@
+{
+  "code-handoff.commands.export": "导出 Stash\u2026",
+  "code-handoff.commands.import": "导入 Stash\u2026",
+  "code-handoff.commands.showHistory": "打开最近分享记录\u2026",
+  "code-handoff.views.recent": "最近分享记录"
+}

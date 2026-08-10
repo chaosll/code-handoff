@@ -1,0 +1,78 @@
+{
+  "name": "code-handoff",
+  "displayName": "Code Handoff",
+  "description": "Export a git stash to a shareable YAML and apply it on another machine, with 3-way conflict handling.",
+  "version": "0.1.0",
+  "publisher": "code-handoff",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/example/code-handoff"
+  },
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "SCM"
+  ],
+  "main": "./out/extension.cjs",
+  "activationEvents": [
+    "onCommand:code-handoff.exportStash",
+    "onCommand:code-handoff.importStash",
+    "onCommand:code-handoff.showHistory",
+    "onView:code-handoff.history"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "code-handoff.exportStash",
+        "title": "%code-handoff.commands.export%",
+        "category": "Code Handoff"
+      },
+      {
+        "command": "code-handoff.importStash",
+        "title": "%code-handoff.commands.import%",
+        "category": "Code Handoff"
+      },
+      {
+        "command": "code-handoff.showHistory",
+        "title": "%code-handoff.commands.showHistory%",
+        "category": "Code Handoff"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "code-handoff",
+          "title": "Code Handoff",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "code-handoff": [
+        {
+          "type": "webview",
+          "id": "code-handoff.history",
+          "name": "%code-handoff.views.recent%"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "node esbuild.mjs --test && node --test \"dist-test/**/*.test.js\"",
+    "vscode:prepublish": "npm run build"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.90.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.5.0"
+  }
+}

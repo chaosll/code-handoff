@@ -1,0 +1,6 @@
+{
+  "code-handoff.commands.export": "Export Stash\u2026",
+  "code-handoff.commands.import": "Import Stash\u2026",
+  "code-handoff.commands.showHistory": "Show Recent Shares\u2026",
+  "code-handoff.views.recent": "Recent Shares"
+}
