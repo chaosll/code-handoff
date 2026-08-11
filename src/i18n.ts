@@ -27,6 +27,10 @@ const zh = {
   emptyImport: '未获得任何分享内容。',
   historyTabImport: '导入',
   historyTabExport: '导出',
+  historyRunImport: '导入分享',
+  historyRunExport: '导出 Stash',
+  historyImportRecords: '导入记录',
+  historyExportRecords: '导出记录',
   historyEmpty: '暂无记录,先 导出 或 导入 一次分享',
   historyClearAll: '清空全部',
   historyActionImport: '导入',
@@ -42,6 +46,11 @@ const zh = {
   historyRelMin: '{0} 分钟前',
   historyRelHour: '{0} 小时前',
   historyRelDay: '{0} 天前',
+  previewDirty: '工作区有 {0} 个未提交文件(如 {1}),继续导入可能加剧冲突',
+  previewBaseMissing: '基准提交 {0} 不在本仓库(可能是浅克隆或未拉取该提交),3-way 合并可能降级为硬应用',
+  previewStageFail: '暂存补丁可能无法应用: {0}',
+  previewWorktreeFail: '工作区补丁可能无法应用: {0}',
+  previewProceed: '继续导入',
 } as const;
 
 const en: Record<keyof typeof zh, string> = {
@@ -71,6 +80,10 @@ const en: Record<keyof typeof zh, string> = {
   emptyImport: 'No share content obtained.',
   historyTabImport: 'Import',
   historyTabExport: 'Export',
+  historyRunImport: 'Import share',
+  historyRunExport: 'Export stash',
+  historyImportRecords: 'Import records',
+  historyExportRecords: 'Export records',
   historyEmpty: 'No records yet. Export or import a share first.',
   historyClearAll: 'Clear all',
   historyActionImport: 'Import',
@@ -86,6 +99,11 @@ const en: Record<keyof typeof zh, string> = {
   historyRelMin: '{0} min ago',
   historyRelHour: '{0} h ago',
   historyRelDay: '{0} d ago',
+  previewDirty: 'Workspace has {0} uncommitted file(s) (e.g. {1}); importing on top may cause more conflicts',
+  previewBaseMissing: 'Base commit {0} is not in this repository (shallow clone or not fetched); 3-way merge may fall back to hard apply',
+  previewStageFail: 'The staged patch may fail to apply: {0}',
+  previewWorktreeFail: 'The worktree patch may fail to apply: {0}',
+  previewProceed: 'Continue import',
 };
 
 type Key = keyof typeof zh;

@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { basename } from 'node:path';
 import { HistoryStore } from '../history/store';
 import { ShareRecord } from '../core/history';
-import { runImportText } from '../commands/importStash';
+import { exportStashCommand } from '../commands/exportStash';
+import { importStashCommand, runImportText } from '../commands/importStash';
 import { t } from '../i18n';
 
 interface ViewItem {
@@ -18,6 +19,8 @@ interface ViewItem {
 interface WebStrings {
   tabImport: string;
   tabExport: string;
+  runImport: string;
+  runExport: string;
   empty: string;
   clear: string;
   actImport: string;
@@ -78,6 +81,14 @@ export class HistoryViewProvider implements vscode.WebviewViewProvider {
       case 'list':
         this.pushState();
         break;
+      case 'runExport':
+        await exportStashCommand(vscode, this.store);
+        this.pushState();
+        break;
+      case 'runImport':
+        await importStashCommand(vscode, this.store);
+        this.pushState();
+        break;
       case 'import': {
         const rec = this.store.load().find((r) => r.id === data.id);
         if (!rec) break;
@@ -122,8 +133,10 @@ export class HistoryViewProvider implements vscode.WebviewViewProvider {
 
   private renderHtml(cspSource: string): string {
     const S: WebStrings = {
-      tabImport: t('historyTabImport'),
-      tabExport: t('historyTabExport'),
+      tabImport: t('historyImportRecords'),
+      tabExport: t('historyExportRecords'),
+      runImport: t('historyRunImport'),
+      runExport: t('historyRunExport'),
       empty: t('historyEmpty'),
       clear: t('historyClearAll'),
       actImport: t('historyActionImport'),
@@ -146,6 +159,11 @@ export class HistoryViewProvider implements vscode.WebviewViewProvider {
 <style>
 :root { font-size: 13px; }
 body { margin: 0; padding: 10px; color: var(--vscode-foreground); font-family: var(--vscode-font-family); }
+.actions { display: flex; gap: 6px; margin-bottom: 10px; }
+.primary-action { flex: 1; padding: 5px 0; cursor: pointer; border: 1px solid var(--vscode-button-background);
+  border-radius: 4px; background: var(--vscode-button-background); color: var(--vscode-button-foreground); }
+.secondary-action { flex: 1; padding: 5px 0; cursor: pointer; border: 1px solid var(--vscode-button-secondaryBackground);
+  border-radius: 4px; background: var(--vscode-button-secondaryBackground); color: var(--vscode-button-secondaryForeground); }
 .tabs { display: flex; gap: 4px; margin-bottom: 10px; }
 .tab { flex: 1; padding: 4px 0; text-align: center; cursor: pointer; border: 1px solid var(--vscode-input-border);
   border-radius: 4px; background: transparent; color: var(--vscode-foreground); }
@@ -161,9 +179,13 @@ body { margin: 0; padding: 10px; color: var(--vscode-foreground); font-family: v
 </style>
 </head>
 <body>
+<div class="actions">
+  <button id="btnRunImport" class="secondary-action">${t('historyRunImport')}</button>
+  <button id="btnRunExport" class="primary-action">${t('historyRunExport')}</button>
+</div>
 <div class="tabs">
-  <div class="tab active" data-kind="import">${t('historyTabImport')}</div>
-  <div class="tab" data-kind="export">${t('historyTabExport')}</div>
+  <div class="tab active" data-kind="import">${t('historyImportRecords')}</div>
+  <div class="tab" data-kind="export">${t('historyExportRecords')}</div>
 </div>
 <div id="list"></div>
 <div class="footer"><button id="btnClear" class="button-clear">${t('historyClearAll')}</button></div>
@@ -227,6 +249,12 @@ document.querySelectorAll('.tab').forEach(function (tab) {
 });
 document.getElementById('btnClear').addEventListener('click', function () {
   vs.postMessage({ type: 'clearRequest' });
+});
+document.getElementById('btnRunImport').addEventListener('click', function () {
+  vs.postMessage({ type: 'runImport' });
+});
+document.getElementById('btnRunExport').addEventListener('click', function () {
+  vs.postMessage({ type: 'runExport' });
 });
 window.addEventListener('message', function (e) {
   var m = e.data;

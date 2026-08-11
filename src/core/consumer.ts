@@ -16,7 +16,63 @@ export interface ApplyResult {
   issues: ApplyIssue[];
 }
 
+export interface ImportPreview {
+  dirty: boolean;
+  dirtyFiles: string[];
+  baseCommit: string;
+  baseCommitPresent: boolean;
+  stagedFails: string[];
+  worktreeFails: string[];
+}
+
 const STAGE_ERROR_RE = /error: patch failed: (.+?):\d+/g;
+const INDEX_MISMATCH_RE = /error: (.+?): does not match index/g;
+
+async function capturedCheckFails(cwd: string, patch: string, cached: boolean): Promise<string[]> {
+  if (!patch.trim()) return [];
+  const flags = cached ? ['--check', '--cached'] : ['--check'];
+  const r = await runGit(['apply', ...flags, '-'], { cwd, input: patch });
+  if (r.code === 0) return [];
+  const out: string[] = [];
+  STAGE_ERROR_RE.lastIndex = 0;
+  for (const m of r.stderr.matchAll(STAGE_ERROR_RE)) {
+    const f = m[1].trim();
+    if (f && !out.includes(f)) out.push(f);
+  }
+  INDEX_MISMATCH_RE.lastIndex = 0;
+  for (const m of r.stderr.matchAll(INDEX_MISMATCH_RE)) {
+    const f = m[1].trim();
+    if (f && !out.includes(f)) out.push(f);
+  }
+  if (out.length === 0) out.push(`<${cached ? 'staged' : 'worktree'}>`);
+  return out.slice(0, 10);
+}
+
+export async function previewImport(cwd: string, text: string, sourceName = '输入'): Promise<ImportPreview> {
+  const hf = parseHandoff(text, sourceName);
+
+  const status = await runGit(['status', '--porcelain'], { cwd });
+  const dirtyFiles: string[] = [];
+  for (const line of status.stdout.split('\n')) {
+    if (line.startsWith('?? ')) continue;
+    const f = line.slice(3).trim();
+    if (f && dirtyFiles.length < 5) dirtyFiles.push(f);
+  }
+
+  const base = await runGit(['cat-file', '-e', `${hf.meta.baseCommit}^{commit}`], { cwd });
+
+  const stagedFails = await capturedCheckFails(cwd, hf.staged.patch, true);
+  const worktreeFails = await capturedCheckFails(cwd, hf.worktree.patch, false);
+
+  return {
+    dirty: dirtyFiles.length > 0,
+    dirtyFiles,
+    baseCommit: hf.meta.baseCommit,
+    baseCommitPresent: base.code === 0,
+    stagedFails,
+    worktreeFails,
+  };
+}
 
 async function collectUnmerged(cwd: string): Promise<Set<string>> {
   const r = await runGit(['ls-files', '-u', '--'], { cwd });

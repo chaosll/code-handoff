@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { createTempRepo, cloneFrom } from './helpers/repo';
 import { produceHandoff } from '../src/core/producer';
-import { consumeHandoff } from '../src/core/consumer';
+import { consumeHandoff, previewImport } from '../src/core/consumer';
 
 test('导入后还原暂存/未暂存/untracked', async (t) => {
   const src = createTempRepo();
@@ -79,4 +79,93 @@ test('非法输入被拒绝', async (t) => {
     consumeHandoff(r.dir, 'version: 999\nmeta: { baseCommit: x, stashMessage: y }\n'),
     /版本/,
   );
+});
+
+test('预检: 干净仓库无警告', async (t) => {
+  const src = createTempRepo();
+  await src.init();
+  src.write('a.txt', 'base\n');
+  await src.commitAll('init');
+  src.write('a.txt', 'base\nunstaged\n');
+  const st = await src.git(['stash', 'push', '-m', 'preview']);
+  assert.equal(st.code, 0, st.stderr);
+  const { text } = await produceHandoff(src.dir, 'stash@{0}');
+
+  const tgt = await cloneFrom(src, 'dst');
+  t.after(() => {
+    src.destroy();
+    tgt.destroy();
+  });
+
+  const preview = await previewImport(tgt.dir, text);
+  assert.equal(preview.dirty, false);
+  assert.equal(preview.baseCommitPresent, true);
+  assert.equal(preview.stagedFails.length, 0);
+  assert.equal(preview.worktreeFails.length, 0);
+});
+
+test('预检: 检测到工作区脏文件', async (t) => {
+  const src = createTempRepo();
+  await src.init();
+  src.write('a.txt', 'base\n');
+  await src.commitAll('init');
+  src.write('a.txt', 'base\nunstaged\n');
+  const st = await src.git(['stash', 'push', '-m', 'preview']);
+  assert.equal(st.code, 0, st.stderr);
+  const { text } = await produceHandoff(src.dir, 'stash@{0}');
+
+  const tgt = await cloneFrom(src, 'dst');
+  t.after(() => {
+    src.destroy();
+    tgt.destroy();
+  });
+  tgt.write('a.txt', 'base\nlocal\n');
+
+  const preview = await previewImport(tgt.dir, text);
+  assert.equal(preview.dirty, true);
+  assert.ok(preview.dirtyFiles.includes('a.txt'));
+});
+
+test('预检: 基准提交缺失时报告 false', async (t) => {
+  const src = createTempRepo();
+  await src.init();
+  src.write('a.txt', 'base\n');
+  await src.commitAll('init');
+  src.write('a.txt', 'base\nunstaged\n');
+  const st = await src.git(['stash', 'push', '-m', 'preview']);
+  assert.equal(st.code, 0, st.stderr);
+  const { text } = await produceHandoff(src.dir, 'stash@{0}');
+
+  const other = createTempRepo();
+  await other.init();
+  other.write('x.txt', 'unrelated\n');
+  await other.commitAll('unrelated');
+  t.after(() => {
+    src.destroy();
+    other.destroy();
+  });
+
+  const preview = await previewImport(other.dir, text);
+  assert.equal(preview.baseCommitPresent, false);
+});
+
+test('预检: 目标文件缺失时报告补丁无法应用', async (t) => {
+  const src = createTempRepo();
+  await src.init();
+  src.write('a.txt', 'base\n');
+  await src.commitAll('init');
+  src.write('a.txt', 'base\nunstaged\n');
+  const st = await src.git(['stash', 'push', '-m', 'preview']);
+  assert.equal(st.code, 0, st.stderr);
+  const { text } = await produceHandoff(src.dir, 'stash@{0}');
+
+  const tgt = await cloneFrom(src, 'dst');
+  t.after(() => {
+    src.destroy();
+    tgt.destroy();
+  });
+  await tgt.git(['rm', 'a.txt']);
+
+  const preview = await previewImport(tgt.dir, text);
+  assert.ok(preview.worktreeFails.length > 0, JSON.stringify(preview));
 });

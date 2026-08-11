@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { consumeHandoff, ApplyResult } from '../core/consumer';
+import { consumeHandoff, ApplyResult, previewImport } from '../core/consumer';
 import { parseHandoff } from '../core/handoff';
 import { createId } from '../core/history';
 import { HistoryStore } from '../history/store';
@@ -37,6 +37,34 @@ export async function runImportText(
   text: string,
   opts: RunImportOptions = {},
 ): Promise<void> {
+  try {
+    const preview = await previewImport(cwd, text, opts.sourceLabel ?? '输入');
+    const problems: string[] = [];
+    if (preview.dirty) {
+      problems.push(t('previewDirty', preview.dirtyFiles.length, preview.dirtyFiles.slice(0, 3).join(', ')));
+    }
+    if (!preview.baseCommitPresent) {
+      problems.push(t('previewBaseMissing', preview.baseCommit.slice(0, 7)));
+    }
+    if (preview.stagedFails.length > 0) {
+      problems.push(t('previewStageFail', preview.stagedFails.join(', ')));
+    }
+    if (preview.worktreeFails.length > 0) {
+      problems.push(t('previewWorktreeFail', preview.worktreeFails.join(', ')));
+    }
+    if (problems.length > 0) {
+      const choice = await api.window.showWarningMessage(
+        problems.join('\n'),
+        { modal: true },
+        t('previewProceed'),
+        t('historyCancel'),
+      );
+      if (choice !== t('previewProceed')) return;
+    }
+  } catch (e) {
+    // 预检失败(如非法内容)交给 consumeHandoff 统一报错
+  }
+
   const channel = api.window.createOutputChannel(t('outputName'));
   let result: ApplyResult;
   try {
